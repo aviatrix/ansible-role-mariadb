@@ -1,6 +1,5 @@
 # roles/mariadb/tasks/install.yml
 ---
-
 - name: Add official MariaDB repository
   yum_repository:
     name: MariaDB
@@ -8,11 +7,17 @@
     baseurl: "http://{{ mariadb_mirror }}/{{ mariadb_version }}/{{ ansible_distribution|lower|regex_replace('redhat', 'rhel')|regex_replace('oraclelinux', 'centos') }}{{ ansible_distribution_major_version }}-amd64"
     gpgkey: https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
     gpgcheck: true
+  when: ansible_facts['os_family'] == "RedHat"
   tags: mariadb
 
 - name: Install packages
   package:
     name: "{{ item }}"
-    state: installed
+    state: present
   with_items: "{{ mariadb_packages }}"
+  tags: mariadb
+
+- pip:
+    name: PyMySQL
+  when: ansible_facts['os_family'] == "Debian"
   tags: mariadb

@@ -1,12 +1,22 @@
 # roles/mariadb/tasks/databases.yml
 ---
-
 - name: Remove the test database
   mysql_db:
     name: test
     login_user: root
     login_password: "{{ mariadb_root_password }}"
     state: absent
+  when: ansible_facts['os_family'] == "RedHat"
+  tags: mariadb
+
+- name: Remove the test database
+  mysql_db:
+    name: test
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: "{{ mariadb_socket }}"
+    state: absent
+  when: ansible_facts['os_family'] == "Debian"
   tags: mariadb
 
 - name: Create user defined databases
@@ -16,6 +26,19 @@
     login_password: "{{ mariadb_root_password }}"
     state: present
   with_items: "{{ mariadb_databases }}"
+  when: ansible_facts['os_family'] == "RedHat"
+  register: db_creation
+  tags: mariadb
+
+- name: Create user defined databases
+  mysql_db:
+    name: "{{ item.name }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: "{{ mariadb_socket }}"
+    state: present
+  with_items: "{{ mariadb_databases }}"
+  when: ansible_facts['os_family'] == "Debian"
   register: db_creation
   tags: mariadb
 
@@ -26,7 +49,7 @@
   copy:
     src: "{{ item.item.init_script }}"
     dest: "/tmp/{{ item.item.init_script|basename }}"
-    mode: '0600'
+    mode: "0600"
   with_items: "{{ db_creation.results }}"
   when: item.changed and item.item.init_script is defined
   tags: mariadb
@@ -39,7 +62,19 @@
     login_user: root
     login_password: "{{ mariadb_root_password }}"
   with_items: "{{ db_creation.results }}"
-  when: item.changed and item.item.init_script is defined
+  when: item.changed and item.item.init_script is defined and (ansible_facts['os_family'] == "RedHat")
+  tags: mariadb
+
+- name: Initialise databases
+  mysql_db:
+    name: "{{ item.item.name }}"
+    state: import
+    target: "/tmp/{{ item.item.init_script|basename }}"
+    login_user: root
+    login_password: "{{ mariadb_root_password }}"
+    login_unix_socket: "{{ mariadb_socket }}"
+  with_items: "{{ db_creation.results }}"
+  when: item.changed and item.item.init_script is defined and (ansible_facts['os_family'] == "Debian")
   tags: mariadb
 
 - name: Delete init scripts from the server
