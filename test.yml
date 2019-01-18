@@ -23,5 +23,7 @@
         general-log:
         general-log-file: queries.log
         log-output: file
+    #when running in travis CI this fails since the container is not privileged
+    mariadb_configure_swappiness: false
   roles:
     - role_under_test
