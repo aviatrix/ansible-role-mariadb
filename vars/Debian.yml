@@ -2,6 +2,7 @@
 ---
 mariadb_packages:
   - mariadb-server
+  - python-mysqldb
   - python-pip
   - python3-setuptools
 
